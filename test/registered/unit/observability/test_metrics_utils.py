@@ -1,6 +1,7 @@
 import unittest
 
 from sglang.srt.observability.utils import (
+    exponential_buckets,
     generate_buckets,
     two_sides_exponential_buckets,
 )
@@ -137,6 +138,32 @@ class TestMetricsUtils(unittest.TestCase):
 
         # Results should be identical
         self.assertEqual(direct_result, indirect_result)
+
+
+class TestExponentialBuckets(unittest.TestCase):
+
+    def test_basic_sequence(self):
+        """Test that buckets follow start * width^i pattern."""
+        self.assertEqual(exponential_buckets(1.0, 2.0, 4), [1.0, 2.0, 4.0, 8.0])
+
+    def test_length_zero_returns_empty(self):
+        """Test that length=0 produces an empty list."""
+        self.assertEqual(exponential_buckets(1.0, 2.0, 0), [])
+
+    def test_width_one_repeats_start(self):
+        """Test that width=1.0 produces identical values."""
+        self.assertEqual(exponential_buckets(5.0, 1.0, 3), [5.0, 5.0, 5.0])
+
+    def test_fractional_start_and_width(self):
+        """Test with the real production parameters (start=0.05, width=1.5)."""
+        buckets = exponential_buckets(0.05, 1.5, 3)
+        self.assertAlmostEqual(buckets[0], 0.05)
+        self.assertAlmostEqual(buckets[1], 0.075)
+        self.assertAlmostEqual(buckets[2], 0.1125)
+
+    def test_length_one(self):
+        """Test that length=1 returns only the start value."""
+        self.assertEqual(exponential_buckets(10.0, 3.0, 1), [10.0])
 
 
 if __name__ == "__main__":
